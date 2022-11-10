@@ -1,0 +1,8 @@
+# GMT 6 Session common arguments shelf
+BEGIN GMT 6.1.1
+B	a10f5:Time (s):/a50f10:Distance (km)::.3020220_2018/hyd:WSne
+J	X
+JX	X17/10
+R	20/90/369.23/500
+@L	4
+END
