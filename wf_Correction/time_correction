@@ -1,0 +1,54 @@
+#!/bin/sh
+#correct the time shift....
+rm data.dat
+export SAC_DISPLAY_COPYRIGHT=1
+input_dir=~/Aqeel_practice/Noise_Correlation/data_24h_modified
+#input_dir=/NAS2/Abbas/TS14_OBS
+lagtime=0.0052
+for stnm in H36
+do
+	cd $stnm
+#1. get the day and time
+   	   for file in $input_dir/$stnm/201*/*
+           do
+		 abbas=$(echo $file | awk -F "/" '{print substr($9,1,10)}') 
+		 dat=`saclst  kzdate f $file | awk '{print substr($2,1,10)}'`
+		 time=`saclst  kztime f $file| awk '{print substr($2,1,14)}'`
+                 echo "orignal date" $dat "orignal time" $time 
+
+#2. subtract the time from orignal data
+	         new_time=`date -d "$(date -Iseconds -d "$dat $time") - 0 hours - 0 minutes - $lagtime seconds"  +%Y/%m/%dT%H:%M:%S.%4N`
+		 
+		echo "new time" $new_time  "lagtime" $lagtime 
+
+#3. seperate all the information from new time such as year, day, hour etc
+
+                 year=$(echo $new_time | awk -F "/" '{print substr($1,1,4)}')
+        	 dt=$(echo $new_time | awk '{print substr($1,1,10)}')
+       		 jday=$(date -d $dt +%j)
+                 hour=$(echo $new_time | awk '{print substr($1,12,2)}')
+        	 min=$(echo $new_time |awk '{print substr($1,15,2)}')
+       		 sec=$(echo $new_time | awk '{print substr($1,18,2)}')
+		 msec=$(echo $new_time | awk '{print substr($1,21,3)}')
+
+		 echo "file" $abbas "orignal date" $dat "modified time" $new_time "jday" $jday "year" $year "hour" $hour "min" $min "sec" $sec "msec" $msec >>$input_dir/data.dat
+
+#4. change the header basedon new modified values
+echo $file "fileeeeeeeeeeeeeeeeEEEEEEEEEEEE"
+sac << EOF
+r $file
+ch o gmt $year $jday $hour $min $sec $msec
+ch allt (0 - &1,o&) iztype IO
+wh 
+q
+EOF
+#w $file
+#synchronize 
+
+lagtime=$(echo "$lagtime+0.0052" |bc -l| sed -e 's/^\./0./' -e 's/^-\./-0./');
+#lagtime=$(echo "$lagtime+0.0026" |bc| awk '{printf "%f", $0}')
+echo $lagtime >> $input_dir/data.dat
+
+	done
+
+done 

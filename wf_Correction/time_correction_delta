@@ -1,0 +1,83 @@
+#!/bin/sh
+#correct the time shift....
+#input lag time data from matlab using plot.cf code
+#combine time lag values with sac files in input file 
+
+#0: input parameters
+
+input_dir=/home/aqeel/Aqeel_practice/Noise_Correlation/data_hyd_6h  #NEED TO CHECK
+group="H36"
+
+#1:Get the information from input file (lag time and file name)
+
+	
+	rm data_sharp_H36.dat
+	export SAC_DISPLAY_COPYRIGHT=1
+	while read line && [ "$line" != "" ];
+	do 
+	#echo $line
+	lagtime=$(echo $line |awk '{print $3}') ;
+	filename=$(echo $line |awk '{print substr($1,1,6)}') ;
+	#filename=$(echo $line |awk '{print $1}') ;
+	year=$(echo $line |awk '{print $2}') ;
+	#echo $lagtime "lag" $filename "filename" $year "year"
+
+#2. Get the data such as date and time in the file name 
+
+		for stnm in $input_dir/$group/$year/$filename*hyd*
+		do
+		echo $stnm "abbbass"
+
+		day=$(echo $stnm | awk -F "/" '{print substr($9,1,3)}') 
+		#echo $day "file name or day name"
+		dat=`saclst  kzdate f $stnm | awk '{print substr($2,1,11)}'`
+		time=`saclst  kztime f $stnm| awk '{print substr($2,1,14)}'`
+		delta=`saclst  delta f $stnm| awk '{print substr($2,1,4)}'`
+                #echo "orignal date" $dat "orignal time" $time "delta" $delta
+
+#2. subtract the time from orignal data
+
+			total_seconds=$(date -d "$dat $time" +%s.%4N)
+
+  			new_seconds=$(echo "$total_seconds -($lagtime)" |bc)
+
+			new_time=$(date --date @"$new_seconds" +%Y/%m/%dT%H:%M:%S.%3N) #convert into new date and time 
+
+			#echo $total_seconds "total seconds" "$new_time" "new_time" $current_date "current date"
+		 
+			#echo "new time" $new_time  "lagtime" $lagtime 
+
+#3. seperate all the information from new time such as year, day, hour etc
+
+                 	year=$(echo $new_time | awk -F "/" '{print substr($1,1,4)}')
+        	 	dt=$(echo $new_time | awk '{print substr($1,1,10)}') #date
+       		 	jday=$(date -d $dt +%j)
+                	hour=$(echo $new_time | awk '{print substr($1,12,2)}')
+        		min=$(echo $new_time |awk '{print substr($1,15,2)}')
+       			sec=$(echo $new_time | awk '{print substr($1,18,2)}')
+		 	msec=$(echo $new_time | awk '{print substr($1,21,3)}')
+			
+#4: modified the B values
+			begin=$(saclst b f $stnm | awk '{print $2}')
+			mod_begin=$(echo $begin $lagtime | awk '{print $1+($2)}') #value of new B
+			
+
+#5: get the modified delta in miliseconds
+
+			delta_new=$(echo "scale=10; ((($lagtime*100/24)/3600)/100)"| bc -l | sed -e 's/^\./0./' -e 's/^-\./-0./');
+			resample_data=$(echo "scale=10; $delta +($delta_new)" |bc | sed -e 's/^\./0./' -e 's/^-\./-0./');
+			#echo "begin" $begin "mod_begin" $mod_begin  #$delta_new "delta new" "resmaple data " $resample_data
+			#echo $stnm
+		 #echo "file" $day "orignal date" $dat "original time" $time "modified time" $new_time "jday" $jday "hour" $hour "min" $min "sec" $sec "msec" $msec >> dataH33.dat
+#4. change the header based on new modified values
+#echo $stnm "fileeeeeeeeeeeeeeeeEEEEEEEEEEEE"
+
+sac << EOF
+r $stnm
+ch b $mod_begin
+wh
+q
+EOF
+
+done
+done < H36_Linear.dat
