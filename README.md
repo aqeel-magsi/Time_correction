@@ -18,6 +18,4 @@ Each directory contains two folder(methods) to inspect clock-drift
 
 Reference Article:
 
-    Evaluating and correcting short-term clock drift in data from temporary seismic deployments
-    
-    https://www.sciencedirect.com/science/article/pii/S2772467022000902
+ [Evaluating and correcting short-term clock drift in data from temporary seismic deployments](https://www.sciencedirect.com/science/article/pii/S2772467022000902) 
